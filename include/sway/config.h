@@ -726,7 +726,7 @@ void free_switch_binding(struct sway_switch_binding *binding);
 
 void free_gesture_binding(struct sway_gesture_binding *binding);
 
-void seat_execute_command(struct sway_seat *seat, struct sway_binding *binding);
+bool seat_execute_command(struct sway_seat *seat, struct sway_binding *binding);
 
 void load_swaybar(struct bar_config *bar);
 

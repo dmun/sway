@@ -518,8 +518,7 @@ static void handle_key_event(struct sway_keyboard *keyboard,
 	}
 
 	if (binding) {
-		seat_execute_command(seat, binding);
-		handled = true;
+		handled = seat_execute_command(seat, binding);
 	}
 
 	if (!handled && keyboard->wlr->group) {

@@ -22,6 +22,7 @@ enum cmd_status {
 	CMD_FAILURE,		/**< The command resulted in an error */
 	CMD_INVALID, 		/**< Unknown command or parser error */
 	CMD_DEFER,		/**< Command execution deferred */
+	CMD_UNHANDLED,		/**< The command declined to act; don't consume the key */
 	CMD_BLOCK,
 	CMD_BLOCK_COMMANDS,
 	CMD_BLOCK_END

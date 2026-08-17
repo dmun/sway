@@ -377,6 +377,46 @@ static struct cmd_results *focus_child(void) {
 	return cmd_results_new(CMD_SUCCESS, NULL);
 }
 
+/**
+ * Focus the nth tab of the innermost tabbed ancestor of the focused container.
+ *
+ * Stacked and split levels are skipped, so a container nested inside a split
+ * which itself lives in a tab still switches the tab. If there is no tabbed
+ * ancestor, the ancestor has fewer than two tabs, or n is out of range, the
+ * command is left unhandled so the key falls through to the focused client.
+ */
+static struct cmd_results *focus_tab(struct sway_seat *seat,
+		struct sway_container *container, const char *arg) {
+	char *end;
+	int n = strtol(arg, &end, 10);
+	if (end == arg || *end != '\0') {
+		return cmd_results_new(CMD_INVALID, "Expected 'focus tab <number>'");
+	}
+
+	struct sway_container *tab = NULL;
+	for (struct sway_container *con = container; con; con = con->pending.parent) {
+		if (container_parent_layout(con) == L_TABBED) {
+			tab = con;
+			break;
+		}
+	}
+	if (!tab) {
+		return cmd_results_new(CMD_UNHANDLED, NULL);
+	}
+
+	list_t *siblings = container_get_siblings(tab);
+	if (siblings->length < 2 || n < 1 || n > siblings->length) {
+		return cmd_results_new(CMD_UNHANDLED, NULL);
+	}
+
+	struct sway_container *target = siblings->items[n - 1];
+	struct sway_container *view =
+		seat_get_focus_inactive_view(seat, &target->node);
+	seat_set_focus_container(seat, view ? view : target);
+	seat_consider_warp_to_focus(seat);
+	return cmd_results_new(CMD_SUCCESS, NULL);
+}
+
 struct cmd_results *cmd_focus(int argc, char **argv) {
 	if (config->reading || !config->active) {
 		return cmd_results_new(CMD_DEFER, NULL);
@@ -435,6 +475,9 @@ struct cmd_results *cmd_focus(int argc, char **argv) {
 	if (strcasecmp(argv[0], "child") == 0) {
 		return focus_child();
 	}
+	if (strcasecmp(argv[0], "tab") == 0 && argc == 2) {
+		return focus_tab(seat, container, argv[1]);
+	}
 
 	enum wlr_direction direction = 0;
 	bool descend = true;
@@ -442,7 +485,7 @@ struct cmd_results *cmd_focus(int argc, char **argv) {
 		if (!get_direction_from_next_prev(container, seat, argv[0], &direction)) {
 			return cmd_results_new(CMD_INVALID,
 				"Expected 'focus <direction|next|prev|parent|child|mode_toggle|floating|tiling>' "
-				"or 'focus output <direction|name>'");
+				"or 'focus tab <number>' or 'focus output <direction|name>'");
 		} else if (argc == 2 && strcasecmp(argv[1], "sibling") == 0) {
 			descend = false;
 		}

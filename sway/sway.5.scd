@@ -136,6 +136,15 @@ They are expected to be used with *bindsym* or at runtime through *swaymsg*(1).
 *focus* parent
 	Moves focus to the parent of the focused container.
 
+*focus* tab <number>
+	Moves focus to the _number_-th tab, counting from 1, of the innermost tabbed
+	container the focused container is inside of. Stacked and split levels are
+	skipped, so a container nested inside a split which itself lives in a tab
+	still switches the tab. If the focused container is not inside a tabbed
+	container, the tabbed container has only one tab, or _number_ is out of range,
+	nothing happens and the key binding is passed through to the focused window
+	instead.
+
 *focus* output up|right|down|left
 	Moves focus to the next output in the specified direction.
 

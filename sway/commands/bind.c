@@ -602,20 +602,24 @@ struct cmd_results *cmd_unbindswitch(int argc, char **argv) {
 
 /**
  * Execute the command associated to a binding
+ *
+ * Returns true if the binding was handled, and false if every command it ran
+ * declined to act, in which case the caller should let the key fall through to
+ * the focused client.
  */
-void seat_execute_command(struct sway_seat *seat, struct sway_binding *binding) {
+bool seat_execute_command(struct sway_seat *seat, struct sway_binding *binding) {
 	if (!config->active) {
 		sway_log(SWAY_DEBUG, "deferring command for binding: %s",
 				binding->command);
 		struct sway_binding *deferred = calloc(1, sizeof(struct sway_binding));
 		if (!deferred) {
 			sway_log(SWAY_ERROR, "Failed to allocate deferred binding");
-			return;
+			return false;
 		}
 		memcpy(deferred, binding, sizeof(struct sway_binding));
 		deferred->command = binding->command ? strdup(binding->command) : NULL;
 		list_add(seat->deferred_bindings, deferred);
-		return;
+		return false;
 	}
 
 	sway_log(SWAY_DEBUG, "running command for binding: %s", binding->command);
@@ -634,11 +638,18 @@ void seat_execute_command(struct sway_seat *seat, struct sway_binding *binding) 
 
 	list_t *res_list = execute_command(binding->command, seat, con);
 	bool success = true;
+	// Only treat the binding as unhandled if every command declined to act
+	bool unhandled = res_list->length > 0;
 	for (int i = 0; i < res_list->length; ++i) {
 		struct cmd_results *results = res_list->items[i];
-		if (results->status != CMD_SUCCESS) {
-			sway_log(SWAY_DEBUG, "could not run command for binding: %s (%s)",
-				binding->command, results->error);
+		if (results->status != CMD_UNHANDLED) {
+			unhandled = false;
+			if (results->status != CMD_SUCCESS) {
+				sway_log(SWAY_DEBUG, "could not run command for binding: %s (%s)",
+					binding->command, results->error);
+				success = false;
+			}
+		} else {
 			success = false;
 		}
 		free_cmd_results(results);
@@ -649,6 +660,7 @@ void seat_execute_command(struct sway_seat *seat, struct sway_binding *binding) 
 	}
 
 	transaction_commit_dirty();
+	return !unhandled;
 }
 
 /**

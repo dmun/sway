@@ -519,6 +519,12 @@ static void handle_key_event(struct sway_keyboard *keyboard,
 
 	if (binding) {
 		handled = seat_execute_command(seat, binding);
+		if (!handled && keyboard->repeat_binding == binding) {
+			// The binding declined, so the key is being passed on to the
+			// client, which does its own repeat. Drop the repeat we armed
+			// above, or we would re-run the command for the whole keypress.
+			sway_keyboard_disarm_key_repeat(keyboard);
+		}
 	}
 
 	if (!handled && keyboard->wlr->group) {
@@ -662,8 +668,13 @@ static int handle_keyboard_repeat(void *data) {
 			}
 		}
 
-		seat_execute_command(keyboard->seat_device->sway_seat,
-				keyboard->repeat_binding);
+		struct sway_binding *binding = keyboard->repeat_binding;
+		if (!seat_execute_command(keyboard->seat_device->sway_seat, binding)
+				&& keyboard->repeat_binding == binding) {
+			// Nothing left for the binding to act on -- stop repeating rather
+			// than re-running it for the rest of the keypress.
+			sway_keyboard_disarm_key_repeat(keyboard);
+		}
 	}
 	return 0;
 }

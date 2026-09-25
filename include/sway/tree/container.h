@@ -63,6 +63,8 @@ struct sway_container_state {
 	// These are in layout coordinates.
 	double content_x, content_y;
 	double content_width, content_height;
+
+	char *formatted_title; // The title displayed in the title bar
 };
 
 struct sway_container {
@@ -96,7 +98,6 @@ struct sway_container {
 	struct sway_container_state pending;
 
 	char *title;           // The view's title (unformatted)
-	char *formatted_title; // The title displayed in the title bar
 	int title_width;
 
 	char *title_format;
@@ -178,6 +179,8 @@ void container_reap_empty(struct sway_container *con);
 struct sway_container *container_flatten(struct sway_container *container);
 
 void container_update_title_bar(struct sway_container *container);
+
+void container_update_title_text(struct sway_container *container);
 
 void container_update_marks(struct sway_container *container);
 
